@@ -67,6 +67,8 @@ export default function App() {
 
   const messages = activeChat?.messages ?? []
 
+  const canCreateNewChat = chats.length === 0 ? true : Boolean(chats[0]?.title)
+
   function appendMessageToChat(chatId: string, message: Chat['messages'][number]) {
     setChats((prev) =>
       prev.map((chat) => {
@@ -151,7 +153,15 @@ export default function App() {
     return await res.text()
   }
 
-  async function handleSubmit({ file, question }: { file: File | null; question: string }) {
+  async function handleSubmit({
+    file,
+    question,
+    setPhase,
+  }: {
+    file: File | null
+    question: string
+    setPhase: (phase: 'idle' | 'uploading' | 'thinking') => void
+  }) {
     if (!activeChat) return
     if (!activeChat.documentUploaded && !file) return
 
@@ -196,10 +206,12 @@ export default function App() {
     try {
       if (!activeChat.documentUploaded) {
         if (!file) return
+        setPhase('uploading')
         await uploadDocument(file, userId)
         setChatDocumentUploaded(chatId, true)
       }
 
+      setPhase('thinking')
       const answer = await askFollowUp(question, userId)
 
       appendMessageToChat(chatId, {
@@ -220,6 +232,7 @@ export default function App() {
   }
 
   function handleNewChat() {
+    if (!canCreateNewChat) return
     const now = new Date()
     const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 
@@ -252,12 +265,14 @@ export default function App() {
           activeChatId={activeChatId}
           onSelectChat={setActiveChatId}
           onNewChat={handleNewChat}
+          disableNewChat={!canCreateNewChat}
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
           <ChatHeader
             title="Financial Document Intelligence System"
             onNewChat={handleNewChat}
+            disableNewChat={!canCreateNewChat}
           />
 
           <main className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">

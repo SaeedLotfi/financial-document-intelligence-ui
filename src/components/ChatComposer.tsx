@@ -1,8 +1,14 @@
 import { useRef, useState } from 'react'
 
+type SubmitPhase = 'idle' | 'uploading' | 'thinking'
+
 type Props = {
   placeholder?: string
-  onSubmit: (args: { file: File | null; question: string }) => Promise<void>
+  onSubmit: (args: {
+    file: File | null
+    question: string
+    setPhase: (phase: SubmitPhase) => void
+  }) => Promise<void>
   requireFile?: boolean
 }
 
@@ -15,6 +21,7 @@ export default function ChatComposer({
   const [file, setFile] = useState<File | null>(null)
   const [question, setQuestion] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [phase, setPhase] = useState<SubmitPhase>('idle')
 
   async function handleSubmit() {
     if (isSubmitting) return
@@ -23,10 +30,12 @@ export default function ChatComposer({
 
     try {
       setIsSubmitting(true)
-      await onSubmit({ file, question: trimmed })
+      setPhase(requireFile ? 'uploading' : 'thinking')
+      await onSubmit({ file, question: trimmed, setPhase })
       setQuestion('')
     } finally {
       setIsSubmitting(false)
+      setPhase('idle')
     }
   }
 
@@ -93,17 +102,48 @@ export default function ChatComposer({
                   question.trim().length === 0
                 }
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  className="h-4 w-4"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h12M12 6l6 6-6 6" />
-                </svg>
-                {isSubmitting ? 'Submitting...' : 'Submit'}
+                {isSubmitting ? (
+                  <svg
+                    className="h-4 w-4 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                    />
+                    <path
+                      className="opacity-75"
+                      d="M22 12a10 10 0 0 1-10 10"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h12M12 6l6 6-6 6" />
+                  </svg>
+                )}
+                {phase === 'uploading'
+                  ? 'Uploading file ...'
+                  : phase === 'thinking'
+                    ? 'Thinking ...'
+                    : 'Submit'}
               </button>
             </div>
           </div>

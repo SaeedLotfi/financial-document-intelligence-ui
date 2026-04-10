@@ -5,6 +5,7 @@ type Props = {
   activeChatId: string
   onSelectChat: (chatId: string) => void
   onNewChat: () => void
+  disableNewChat?: boolean
 }
 
 export default function ChatSidebar({
@@ -12,6 +13,7 @@ export default function ChatSidebar({
   activeChatId,
   onSelectChat,
   onNewChat,
+  disableNewChat = false,
 }: Props) {
   return (
     <aside className="hidden w-72 flex-col border-r border-zinc-200 bg-zinc-50 sm:flex">
@@ -22,8 +24,9 @@ export default function ChatSidebar({
 
         <button
           onClick={onNewChat}
-          className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500"
+          className="rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
           type="button"
+          disabled={disableNewChat}
         >
           New chat
         </button>
