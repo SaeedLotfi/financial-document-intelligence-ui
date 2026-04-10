@@ -10,6 +10,8 @@ export default function App() {
     {
       id: 'chat-1',
       title: 'Welcome',
+      userId: null,
+      documentUploaded: false,
       messages: [
         {
           id: 'm-1',
@@ -37,6 +39,8 @@ export default function App() {
     {
       id: 'chat-2',
       title: 'Quarterly report',
+      userId: null,
+      documentUploaded: false,
       messages: [
         {
           id: 'm-4',
@@ -63,14 +67,169 @@ export default function App() {
 
   const messages = activeChat?.messages ?? []
 
+  function appendMessageToChat(chatId: string, message: Chat['messages'][number]) {
+    setChats((prev) =>
+      prev.map((chat) => {
+        if (chat.id !== chatId) return chat
+        return { ...chat, messages: [...chat.messages, message] }
+      }),
+    )
+  }
+
+  function setChatUserId(chatId: string, userId: string) {
+    setChats((prev) =>
+      prev.map((chat) => {
+        if (chat.id !== chatId) return chat
+        return { ...chat, userId }
+      }),
+    )
+  }
+
+  function setChatTitle(chatId: string, title: string) {
+    setChats((prev) =>
+      prev.map((chat) => {
+        if (chat.id !== chatId) return chat
+        return { ...chat, title }
+      }),
+    )
+  }
+
+  function setChatDocumentUploaded(chatId: string, documentUploaded: boolean) {
+    setChats((prev) =>
+      prev.map((chat) => {
+        if (chat.id !== chatId) return chat
+        return { ...chat, documentUploaded }
+      }),
+    )
+  }
+
+  function generateUserId() {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+      return crypto.randomUUID()
+    }
+
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  }
+
+  async function uploadDocument(file: File, userId: string) {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('user_id', userId)
+
+    const res = await fetch('http://127.0.0.1:8000/process-document', {
+      method: 'POST',
+      headers: {
+        accept: 'application/json',
+      },
+      body: formData,
+    })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(text || `Upload failed (${res.status})`)
+    }
+
+    const contentType = res.headers.get('content-type') ?? ''
+    if (contentType.includes('application/json')) return (await res.json()) as unknown
+    return await res.text()
+  }
+
+  async function askFollowUp(question: string, userId: string) {
+    const url = new URL('http://127.0.0.1:8000/follow-up')
+    url.searchParams.set('user_id', userId)
+    url.searchParams.set('question', question)
+
+    const res = await fetch(url.toString(), { method: 'POST' })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(text || `Question failed (${res.status})`)
+    }
+
+    const contentType = res.headers.get('content-type') ?? ''
+    if (contentType.includes('application/json')) return (await res.json()) as unknown
+    return await res.text()
+  }
+
+  async function handleSubmit({ file, question }: { file: File | null; question: string }) {
+    if (!activeChat) return
+    if (!activeChat.documentUploaded && !file) return
+
+    const now = new Date()
+    const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    const chatId = activeChat.id
+
+    const userId = activeChat.userId ?? generateUserId()
+    if (!activeChat.userId) {
+      setChatUserId(chatId, userId)
+    }
+
+    if (!activeChat.title) {
+      setChatTitle(chatId, question)
+    }
+
+    appendMessageToChat(chatId, {
+      id: `u-${now.getTime()}`,
+      role: 'user',
+      content: question,
+      time,
+    })
+
+    function formatAssistantContent(answer: unknown) {
+      if (typeof answer === 'string') return answer
+
+      if (answer && typeof answer === 'object') {
+        const parsedDocument = (answer as { parsed_document?: unknown }).parsed_document
+        if (parsedDocument && typeof parsedDocument === 'object') {
+          const rawText = (parsedDocument as { raw_text?: unknown }).raw_text
+          if (typeof rawText === 'string' && rawText.trim().length > 0) {
+            return rawText
+          }
+        }
+
+        return `\`\`\`json\n${JSON.stringify(answer, null, 2)}\n\`\`\``
+      }
+
+      return String(answer)
+    }
+
+    try {
+      if (!activeChat.documentUploaded) {
+        if (!file) return
+        await uploadDocument(file, userId)
+        setChatDocumentUploaded(chatId, true)
+      }
+
+      const answer = await askFollowUp(question, userId)
+
+      appendMessageToChat(chatId, {
+        id: `a-${now.getTime() + 1}`,
+        role: 'assistant',
+        content: formatAssistantContent(answer),
+        time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      appendMessageToChat(chatId, {
+        id: `e-${now.getTime() + 2}`,
+        role: 'assistant',
+        content: `**Error:** ${message}`,
+        time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+      })
+    }
+  }
+
   function handleNewChat() {
     const now = new Date()
-    const id = `chat-${now.getTime()}`
     const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 
+    const userId = generateUserId()
+
     const newChat: Chat = {
-      id,
-      title: 'New chat',
+      id: userId,
+      title: '',
+      userId,
+      documentUploaded: false,
       messages: [
         {
           id: `m-${now.getTime()}`,
@@ -82,7 +241,7 @@ export default function App() {
     }
 
     setChats((prev) => [newChat, ...prev])
-    setActiveChatId(id)
+    setActiveChatId(userId)
   }
 
   return (
@@ -109,7 +268,7 @@ export default function App() {
             </div>
           </main>
 
-          <ChatComposer />
+          <ChatComposer onSubmit={handleSubmit} requireFile={!activeChat?.documentUploaded} />
         </div>
       </div>
     </div>

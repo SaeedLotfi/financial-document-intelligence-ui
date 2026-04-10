@@ -8,5 +8,7 @@ export type Message = {
 export type Chat = {
   id: string
   title: string
+  userId: string | null
+  documentUploaded: boolean
   messages: Message[]
 }
