@@ -9,14 +9,46 @@ export default function App() {
   const storageChatsKey = 'fdi_chats'
   const storageActiveChatKey = 'fdi_active_chat_id'
 
+  function generateUserId() {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+      return crypto.randomUUID()
+    }
+
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  }
+
+  function createChat() {
+    const now = new Date()
+    const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    const userId = generateUserId()
+
+    const newChat: Chat = {
+      id: userId,
+      title: '',
+      userId,
+      documentUploaded: false,
+      messages: [
+        {
+          id: `m-${now.getTime()}`,
+          role: 'assistant',
+          content: 'Upload a file and ask a question about it.',
+          time,
+        },
+      ],
+    }
+
+    return newChat
+  }
+
   const [chats, setChats] = useState<Chat[]>(() => {
     if (typeof window === 'undefined') return []
     const raw = window.localStorage.getItem(storageChatsKey)
-    if (!raw) return []
+    if (!raw) return [createChat()]
 
     try {
       const parsed = JSON.parse(raw) as unknown
       if (!Array.isArray(parsed)) return []
+      if (parsed.length === 0) return [createChat()]
       return parsed as Chat[]
     } catch {
       return []
@@ -94,14 +126,6 @@ export default function App() {
         return { ...chat, documentUploaded }
       }),
     )
-  }
-
-  function generateUserId() {
-    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-      return crypto.randomUUID()
-    }
-
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`
   }
 
   async function uploadDocument(file: File, userId: string) {
@@ -237,28 +261,23 @@ export default function App() {
 
   function handleNewChat() {
     if (!canCreateNewChat) return
-    const now = new Date()
-    const time = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-
-    const userId = generateUserId()
-
-    const newChat: Chat = {
-      id: userId,
-      title: '',
-      userId,
-      documentUploaded: false,
-      messages: [
-        {
-          id: `m-${now.getTime()}`,
-          role: 'assistant',
-          content: 'Upload a file and ask a question about it.',
-          time,
-        },
-      ],
-    }
-
+    const newChat = createChat()
     setChats((prev) => [newChat, ...prev])
-    setActiveChatId(userId)
+    setActiveChatId(newChat.id)
+  }
+
+  function handleDeleteChat(chatId: string) {
+    setChats((prev) => {
+      const remaining = prev.filter((c) => c.id !== chatId)
+      const nextChats = remaining.length === 0 ? [createChat()] : remaining
+
+      setActiveChatId((prevActive) => {
+        if (prevActive !== chatId) return prevActive
+        return nextChats[0]?.id ?? ''
+      })
+
+      return nextChats
+    })
   }
 
   return (
@@ -268,6 +287,7 @@ export default function App() {
           chats={chats}
           activeChatId={activeChatId}
           onSelectChat={setActiveChatId}
+          onDeleteChat={handleDeleteChat}
           onNewChat={handleNewChat}
           disableNewChat={!canCreateNewChat}
         />
