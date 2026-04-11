@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ChatComposer from './components/ChatComposer'
 import ChatHeader from './components/ChatHeader'
 import ChatSidebar from './components/ChatSidebar'
@@ -6,63 +6,48 @@ import MessageBubble from './components/MessageBubble'
 import type { Chat } from './types/chat'
 
 export default function App() {
-  const [chats, setChats] = useState<Chat[]>([
-    {
-      id: 'chat-1',
-      title: 'Welcome',
-      userId: null,
-      documentUploaded: false,
-      messages: [
-        {
-          id: 'm-1',
-          role: 'assistant',
-          content:
-            "# Welcome\n\nUpload a file and ask a question about it. Here are a few things I can do:\n\n- Summarize a document\n- Extract key figures\n- Answer questions with citations\n\nTip: try a link like [Vite](https://vitejs.dev/) and some `inline code`.",
-          time: '9:41 AM',
-        },
-        {
-          id: 'm-2',
-          role: 'user',
-          content:
-            "Can you summarize the uploaded document?\n\nPlease include:\n\n1. A short TL;DR\n2. A bullet list of key points\n3. Any risks or anomalies you notice",
-          time: '9:42 AM',
-        },
-        {
-          id: 'm-3',
-          role: 'assistant',
-          content:
-            "Absolutely. Once the file is uploaded, I can:\n\n- Summarize it\n- Extract key points\n- Answer questions\n\n```ts\n// Example: extracted metric\nconst revenue = 125_000_000\n```\n\n> If you want, ask: *\"What changed vs last quarter?\"*",
-          time: '9:42 AM',
-        },
-      ],
-    },
-    {
-      id: 'chat-2',
-      title: 'Quarterly report',
-      userId: null,
-      documentUploaded: false,
-      messages: [
-        {
-          id: 'm-4',
-          role: 'user',
-          content: 'Summarize the key changes vs last quarter.',
-          time: '10:05 AM',
-        },
-        {
-          id: 'm-5',
-          role: 'assistant',
-          content: 'Upload the report and I will highlight the biggest deltas and risks.',
-          time: '10:06 AM',
-        },
-      ],
-    },
-  ])
+  const storageChatsKey = 'fdi_chats'
+  const storageActiveChatKey = 'fdi_active_chat_id'
 
-  const [activeChatId, setActiveChatId] = useState<string>(chats[0]?.id ?? '')
+  const [chats, setChats] = useState<Chat[]>(() => {
+    if (typeof window === 'undefined') return []
+    const raw = window.localStorage.getItem(storageChatsKey)
+    if (!raw) return []
+
+    try {
+      const parsed = JSON.parse(raw) as unknown
+      if (!Array.isArray(parsed)) return []
+      return parsed as Chat[]
+    } catch {
+      return []
+    }
+  })
+
+  const [activeChatId, setActiveChatId] = useState<string>(() => {
+    if (typeof window === 'undefined') return ''
+    const saved = window.localStorage.getItem(storageActiveChatKey)
+    return saved ?? ''
+  })
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(storageChatsKey, JSON.stringify(chats))
+  }, [chats])
+
+  const resolvedActiveChatId = useMemo(() => {
+    if (!activeChatId) return chats[0]?.id ?? ''
+    if (chats.some((c) => c.id === activeChatId)) return activeChatId
+    return chats[0]?.id ?? ''
+  }, [activeChatId, chats])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(storageActiveChatKey, resolvedActiveChatId)
+  }, [resolvedActiveChatId])
 
   const activeChat = useMemo(
-    () => chats.find((c) => c.id === activeChatId) ?? chats[0],
-    [chats, activeChatId],
+    () => chats.find((c) => c.id === resolvedActiveChatId) ?? chats[0],
+    [chats, resolvedActiveChatId],
   )
 
   const messages = activeChat?.messages ?? []
@@ -192,9 +177,15 @@ export default function App() {
         const parsedDocument = (answer as { parsed_document?: unknown }).parsed_document
         if (parsedDocument && typeof parsedDocument === 'object') {
           const rawText = (parsedDocument as { raw_text?: unknown }).raw_text
-          if (typeof rawText === 'string' && rawText.trim().length > 0) {
-            return rawText
+          if (typeof rawText === 'string') {
+            const trimmed = rawText.trim()
+            if (trimmed.length > 0) return trimmed
           }
+        }
+
+        const summary = (answer as { summary?: unknown }).summary
+        if (typeof summary === 'string' && summary.trim().length > 0) {
+          return summary.trim()
         }
 
         return `\`\`\`json\n${JSON.stringify(answer, null, 2)}\n\`\`\``

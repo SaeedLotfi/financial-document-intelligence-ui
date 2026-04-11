@@ -6,7 +6,7 @@ type Props = {
 
 export default function ChatHeader({ title, onNewChat, disableNewChat = false }: Props) {
   return (
-    <header className="border-b border-zinc-200 bg-white/90 px-4 py-4 backdrop-blur sm:px-6">
+    <header className="border-b border-zinc-200 bg-white/90 backdrop-blur sm:px-6">
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           <h1 className="truncate text-lg font-semibold tracking-tight sm:text-xl">{title}</h1>
