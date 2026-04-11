@@ -97,7 +97,7 @@ export default function ChatComposer({
             />
 
             <div className="flex items-center justify-between gap-3">
-              <p className="text-xs text-zinc-500 sm:text-sm">Supported: PDF, DOCX, TXT, images</p>
+              <p className="text-xs text-zinc-500 sm:text-sm">It’s better to upload the PDF file.</p>
 
               <button
                 className="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"

@@ -284,6 +284,12 @@ export default function App() {
     setChatTitle(chatId, title.trim())
   }
 
+  function handleClearAllChats() {
+    const newChat = createChat()
+    setChats([newChat])
+    setActiveChatId(newChat.id)
+  }
+
   return (
     <div dir="ltr" className="min-h-screen bg-white text-zinc-900">
       <div className="mx-auto flex h-screen max-w-6xl">
@@ -294,6 +300,7 @@ export default function App() {
           onDeleteChat={handleDeleteChat}
           onRenameChat={handleRenameChat}
           onNewChat={handleNewChat}
+          onClearAllChats={handleClearAllChats}
           disableNewChat={!canCreateNewChat}
         />
 
@@ -314,6 +321,7 @@ export default function App() {
           </main>
 
           <ChatComposer
+            key={resolvedActiveChatId}
             onSubmit={handleSubmit}
             requireFile={!activeChat?.documentUploaded}
             showUpload={!activeChat?.documentUploaded}
