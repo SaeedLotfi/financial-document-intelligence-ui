@@ -280,6 +280,10 @@ export default function App() {
     })
   }
 
+  function handleRenameChat(chatId: string, title: string) {
+    setChatTitle(chatId, title.trim())
+  }
+
   return (
     <div dir="ltr" className="min-h-screen bg-white text-zinc-900">
       <div className="mx-auto flex h-screen max-w-6xl">
@@ -288,6 +292,7 @@ export default function App() {
           activeChatId={activeChatId}
           onSelectChat={setActiveChatId}
           onDeleteChat={handleDeleteChat}
+          onRenameChat={handleRenameChat}
           onNewChat={handleNewChat}
           disableNewChat={!canCreateNewChat}
         />
