@@ -250,10 +250,11 @@ export default function App() {
       })
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
+      console.log(message)
       appendMessageToChat(chatId, {
         id: `e-${now.getTime() + 2}`,
         role: 'assistant',
-        content: `**Error:** ${message}`,
+        content: `**${JSON.parse(message).detail}**`,
         time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
       })
     }
