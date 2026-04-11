@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import ChatComposer from './components/ChatComposer'
 import ChatHeader from './components/ChatHeader'
 import ChatSidebar from './components/ChatSidebar'
@@ -51,6 +51,12 @@ export default function App() {
   )
 
   const messages = activeChat?.messages ?? []
+
+  const bottomRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [resolvedActiveChatId, messages.length])
 
   const canCreateNewChat = chats.length === 0 ? true : Boolean(chats[0]?.title)
 
@@ -200,6 +206,13 @@ export default function App() {
         setPhase('uploading')
         await uploadDocument(file, userId)
         setChatDocumentUploaded(chatId, true)
+
+        appendMessageToChat(chatId, {
+          id: `u-${now.getTime()}-uploaded`,
+          role: 'assistant',
+          content: 'File uploaded and processing started. Please wait a moment.',
+          time: new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+        })
       }
 
       setPhase('thinking')
@@ -271,10 +284,15 @@ export default function App() {
               {messages.map((message) => {
                 return <MessageBubble key={message.id} message={message} />
               })}
+              <div ref={bottomRef} />
             </div>
           </main>
 
-          <ChatComposer onSubmit={handleSubmit} requireFile={!activeChat?.documentUploaded} />
+          <ChatComposer
+            onSubmit={handleSubmit}
+            requireFile={!activeChat?.documentUploaded}
+            showUpload={!activeChat?.documentUploaded}
+          />
         </div>
       </div>
     </div>

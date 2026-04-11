@@ -10,12 +10,14 @@ type Props = {
     setPhase: (phase: SubmitPhase) => void
   }) => Promise<void>
   requireFile?: boolean
+  showUpload?: boolean
 }
 
 export default function ChatComposer({
   placeholder = 'Ask a question about your file...',
   onSubmit,
   requireFile = true,
+  showUpload = true,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -44,39 +46,44 @@ export default function ChatComposer({
       <div className="mx-auto w-full max-w-3xl">
         <div className="rounded-3xl border border-zinc-200 bg-white p-3 shadow-2xl">
           <div className="mb-3 flex flex-wrap items-center gap-3">
-            <button
-              className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50"
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isSubmitting}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="h-4 w-4"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 16V4m0 0-4 4m4-4 4 4M4 16.5v1.75A1.75 1.75 0 0 0 5.75 20h12.5A1.75 1.75 0 0 0 20 18.25V16.5"
+            {showUpload ? (
+              <>
+                <button
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-zinc-300 bg-white px-4 py-2 text-sm text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50"
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isSubmitting}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    className="h-4 w-4"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 16V4m0 0-4 4m4-4 4 4M4 16.5v1.75A1.75 1.75 0 0 0 5.75 20h12.5A1.75 1.75 0 0 0 20 18.25V16.5"
+                    />
+                  </svg>
+                  <span>Upload file</span>
+                </button>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 />
-              </svg>
-              <span>Upload file</span>
-            </button>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            />
-
-            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500">
-              {file ? file.name : 'No file selected'}
-            </div>
+                <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-500">
+                  {file ? file.name : 'No file selected'}
+                </div>
+              </>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-3">
@@ -126,19 +133,7 @@ export default function ChatComposer({
                       strokeLinecap="round"
                     />
                   </svg>
-                ) : (
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    className="h-4 w-4"
-                    aria-hidden="true"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12h12M12 6l6 6-6 6" />
-                  </svg>
-                )}
+                ) : null}
                 {phase === 'uploading'
                   ? 'Uploading file ...'
                   : phase === 'thinking'
